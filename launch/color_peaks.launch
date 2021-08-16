@@ -14,7 +14,7 @@
     required="true" />
   <node
     name="ScreenColorPeaksManager"
-    pkg="smart_home_analg"
+    pkg="smart_home_scc"
     type="ScreenColorPeaksNode"
     output="screen"
     required="true"
