@@ -1,1 +1,1 @@
-# smart_home_scc
+# sh_scc
