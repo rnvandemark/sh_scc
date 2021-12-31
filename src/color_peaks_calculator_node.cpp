@@ -169,6 +169,7 @@ void ColorPeaksCalculatorNode::screen_calibration_request_callback(
 
     if (last_received_frame == nullptr)
     {
+        RCLCPP_ERROR(get_logger(), "Requested screen calibration, but have not received initial image.");
         goto END;
     }
 
