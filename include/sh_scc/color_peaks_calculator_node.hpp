@@ -4,6 +4,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "cv_bridge/cv_bridge.h"
+#include "image_transport/image_transport.hpp"
 #include "sensor_msgs/msg/image.hpp"
 #include "sh_common_interfaces/msg/color.hpp"
 #include "sh_scc_interfaces/msg/color_peaks_telem.hpp"
@@ -46,7 +47,7 @@ protected:
         screen_calibration_request_srv;
     rclcpp::Service<sh_scc_interfaces::srv::SetScreenCalibrationPointsOfHomography>::SharedPtr
         screen_calibration_set_homography_points_srv;
-    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr cap_image_raw_sub;
+    image_transport::Subscriber cap_image_raw_sub;
     rclcpp::Publisher<sh_common_interfaces::msg::Color>::SharedPtr color_peak_left_pub;
     rclcpp::Publisher<sh_common_interfaces::msg::Color>::SharedPtr color_peak_right_pub;
     rclcpp::Publisher<sh_scc_interfaces::msg::ColorPeaksTelem>::SharedPtr color_peaks_telem_pub;
@@ -70,7 +71,7 @@ public:
         const sh_scc_interfaces::srv::SetScreenCalibrationPointsOfHomography::Request::SharedPtr req,
         sh_scc_interfaces::srv::SetScreenCalibrationPointsOfHomography::Response::SharedPtr res);
 
-    void cap_image_raw_callback(const sensor_msgs::msg::Image::ConstSharedPtr msg);
+    void cap_image_raw_callback(const sensor_msgs::msg::Image::ConstSharedPtr& msg);
 };
 
 }

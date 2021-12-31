@@ -125,14 +125,16 @@ ColorPeaksCalculatorNode::ColorPeaksCalculatorNode() :
             std::placeholders::_2
         )
     );
-    cap_image_raw_sub = create_subscription<sensor_msgs::msg::Image>(
+    cap_image_raw_sub = image_transport::create_subscription(
+        this,
         ::sh::names::topics::SCC_CAMERA_IMAGE,
-        rclcpp::SensorDataQoS(),
         std::bind(
             &sh::ColorPeaksCalculatorNode::cap_image_raw_callback,
             this,
             std::placeholders::_1
-        )
+        ),
+        "raw",
+        rmw_qos_profile_sensor_data
     );
     color_peak_left_pub = create_publisher<sh_common_interfaces::msg::Color>(
         ::sh::names::topics::LEFT_COLOR_PEAK,
@@ -223,7 +225,7 @@ void ColorPeaksCalculatorNode::screen_calibration_set_homography_points_callback
     res->successful = true;
 }
 
-void ColorPeaksCalculatorNode::cap_image_raw_callback(const sensor_msgs::msg::Image::ConstSharedPtr msg)
+void ColorPeaksCalculatorNode::cap_image_raw_callback(const sensor_msgs::msg::Image::ConstSharedPtr& msg)
 {
     last_received_frame = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
     if (homog_set)

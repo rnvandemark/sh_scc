@@ -17,6 +17,7 @@ ament_target_dependencies(sh_color_peaks_calculator_node
     rclcpp
     cv_bridge
     sh_common
+    image_transport
     sensor_msgs
     sh_common_interfaces
     sh_scc_interfaces
