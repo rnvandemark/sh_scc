@@ -12,10 +12,7 @@ find_package(OpenCV REQUIRED)
 
 include_directories(include)
 
-add_executable(sh_color_peaks_calculator_node
-    src/nodes/color_peaks_calculator_node.cpp
-    src/lib/color_peaks_calculator_node.cpp
-)
+add_executable(sh_color_peaks_calculator_node src/color_peaks_calculator_node.cpp)
 ament_target_dependencies(sh_color_peaks_calculator_node
     rclcpp
     cv_bridge
@@ -26,7 +23,7 @@ ament_target_dependencies(sh_color_peaks_calculator_node
     OpenCV
 )
 
-add_executable(cv_bridge_node src/nodes/cv_bridge_node.cpp)
+add_executable(cv_bridge_node src/cv_bridge_node.cpp)
 ament_target_dependencies(cv_bridge_node
     rclcpp
     sh_common

@@ -1,11 +1,13 @@
 #include "sh_scc/color_peaks_calculator_node.hpp"
 #include "sh_common/ros_names.hpp"
 
+#include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/image_encodings.hpp"
 #include "sh_common_interfaces/msg/point.hpp"
 
 #include <opencv2/photo.hpp>
 #include <opencv2/calib3d.hpp>
+#include <memory>
 
 namespace sh {
 
@@ -271,4 +273,11 @@ void ColorPeaksCalculatorNode::cap_image_raw_callback(const sensor_msgs::msg::Im
     }
 }
 
+}
+
+int main(int argc, char** argv) 
+{ 
+    rclcpp::init(argc, argv);
+    rclcpp::spin(std::make_shared<sh::ColorPeaksCalculatorNode>());
+    return 0;
 }
