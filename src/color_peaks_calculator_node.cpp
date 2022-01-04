@@ -120,36 +120,36 @@ ColorPeaksCalculatorNode::ColorPeaksCalculatorNode() :
 
 void ColorPeaksCalculatorNode::cap_image_raw_callback(const sensor_msgs::msg::Image::ConstSharedPtr& msg)
 {
-        sh_scc_interfaces::msg::ColorPeaksTelem color_peaks_telem_msg;
+    sh_scc_interfaces::msg::ColorPeaksTelem color_peaks_telem_msg;
 
-        const cv_bridge::CvImageConstPtr img = cv_bridge::toCvShare(msg, msg->encoding);
+    const cv_bridge::CvImageConstPtr img = cv_bridge::toCvShare(msg, msg->encoding);
 
-        const int k = 4, attempts = 4;
-        double compactness_left, compactness_right;
-        cv::Mat kmeans_labels_left, kmeans_labels_right, kmeans_centers_left, kmeans_centers_right;
-        cv::Range range_height(0, img->image.rows);
-        int width = img->image.cols;
-        int half_width = width / 2;
-        cv::Mat cv_img_world_left = img->image(range_height, cv::Range(0, half_width));
-        cv::Mat cv_img_world_right = img->image(range_height, cv::Range(half_width, width));
-        get_kmeans_of(cv_img_world_left, k, attempts, compactness_left, kmeans_labels_left, kmeans_centers_left);
-        get_kmeans_of(cv_img_world_right, k, attempts, compactness_right, kmeans_labels_right, kmeans_centers_right);
+    const int k = 4, attempts = 4;
+    double compactness_left, compactness_right;
+    cv::Mat kmeans_labels_left, kmeans_labels_right, kmeans_centers_left, kmeans_centers_right;
+    cv::Range range_height(0, img->image.rows);
+    int width = img->image.cols;
+    int half_width = width / 2;
+    cv::Mat cv_img_world_left = img->image(range_height, cv::Range(0, half_width));
+    cv::Mat cv_img_world_right = img->image(range_height, cv::Range(half_width, width));
+    get_kmeans_of(cv_img_world_left, k, attempts, compactness_left, kmeans_labels_left, kmeans_centers_left);
+    get_kmeans_of(cv_img_world_right, k, attempts, compactness_right, kmeans_labels_right, kmeans_centers_right);
 
-        unsigned char lr, lg, lb, rr, rg, rb;
-        set_best_peak(kmeans_labels_left, kmeans_centers_left, lr, lg, lb);
-        set_best_peak(kmeans_labels_right, kmeans_centers_right, rr, rg, rb);
+    unsigned char lr, lg, lb, rr, rg, rb;
+    set_best_peak(kmeans_labels_left, kmeans_centers_left, lr, lg, lb);
+    set_best_peak(kmeans_labels_right, kmeans_centers_right, rr, rg, rb);
 
-        sh_common_interfaces::msg::Color color_peak_left_msg;
-        color_peak_left_msg.channels.resize(3, 0);
-        window_left.push_and_eval(lr, lg, lb, color_peak_left_msg);
+    sh_common_interfaces::msg::Color color_peak_left_msg;
+    color_peak_left_msg.channels.resize(3, 0);
+    window_left.push_and_eval(lr, lg, lb, color_peak_left_msg);
 
-        sh_common_interfaces::msg::Color color_peak_right_msg;
-        color_peak_right_msg.channels.resize(3, 0);
-        window_right.push_and_eval(rr, rg, rb, color_peak_right_msg);
+    sh_common_interfaces::msg::Color color_peak_right_msg;
+    color_peak_right_msg.channels.resize(3, 0);
+    window_right.push_and_eval(rr, rg, rb, color_peak_right_msg);
 
-        color_peak_left_pub->publish(color_peak_left_msg);
-        color_peak_right_pub->publish(color_peak_right_msg);
-        color_peaks_telem_pub->publish(color_peaks_telem_msg);
+    color_peak_left_pub->publish(color_peak_left_msg);
+    color_peak_right_pub->publish(color_peak_right_msg);
+    color_peaks_telem_pub->publish(color_peaks_telem_msg);
 }
 
 }
