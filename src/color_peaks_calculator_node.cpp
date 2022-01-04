@@ -122,7 +122,9 @@ void ColorPeaksCalculatorNode::cap_image_raw_callback(const sensor_msgs::msg::Im
 {
     sh_scc_interfaces::msg::ColorPeaksTelem color_peaks_telem_msg;
 
-    const cv_bridge::CvImageConstPtr img = cv_bridge::toCvShare(msg, msg->encoding);
+    const cv_bridge::CvImageConstPtr bgr = cv_bridge::toCvShare(msg, msg->encoding);
+    cv_bridge::CvImage rgb;
+    cv::cvtColor(bgr->image, rgb.image, cv::COLOR_BGR2RGB);
 
     const int k = 4, attempts = 4;
     color_peaks_telem_msg.kmeans_k = k;
@@ -130,10 +132,10 @@ void ColorPeaksCalculatorNode::cap_image_raw_callback(const sensor_msgs::msg::Im
 
     double compactness_left, compactness_right;
     cv::Mat kmeans_labels_left, kmeans_labels_right, kmeans_centers_left, kmeans_centers_right;
-    cv::Range range_height(0, img->image.rows);
-    const int width = img->image.cols, half_width = width / 2;
-    cv::Mat cv_img_world_left = img->image(range_height, cv::Range(0, half_width));
-    cv::Mat cv_img_world_right = img->image(range_height, cv::Range(half_width, width));
+    cv::Range range_height(0, rgb.image.rows);
+    const int width = rgb.image.cols, half_width = width / 2;
+    cv::Mat cv_img_world_left = rgb.image(range_height, cv::Range(0, half_width));
+    cv::Mat cv_img_world_right = rgb.image(range_height, cv::Range(half_width, width));
     get_kmeans_of(cv_img_world_left, k, attempts, compactness_left, kmeans_labels_left, kmeans_centers_left);
     get_kmeans_of(cv_img_world_right, k, attempts, compactness_right, kmeans_labels_right, kmeans_centers_right);
 
