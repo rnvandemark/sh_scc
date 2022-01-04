@@ -6,14 +6,14 @@
 
 namespace sh {
 
-void get_kmeans_of(cv::Mat& img, int k, int a, double& c, cv::Mat& kmeans_labels, cv::Mat& kmeans_centers)
+void get_kmeans_of(cv::Mat& img, int k, int a, cv::Mat& kmeans_labels, cv::Mat& kmeans_centers)
 {
     cv::Mat img_float(img.rows*img.cols, 3, CV_32F);
     for (int j = 0; j < img.rows; j++)
         for (int i = 0; i < img.cols; i++)
             for (int h = 0; h < 3; h++)
                 img_float.at<float>(j+(i*img.rows), h) = img.at<cv::Vec3b>(j,i)[h];
-    c = cv::kmeans(
+    cv::kmeans( // Ignore the return value, the compactness
         img_float,
         k,
         kmeans_labels,
@@ -24,16 +24,16 @@ void get_kmeans_of(cv::Mat& img, int k, int a, double& c, cv::Mat& kmeans_labels
     );
 }
 
-double get_color_score(float r, float g, float b, float c)
+double get_color_score(float b, float g, float r, float c)
 {
-    cv::Mat3f hsv, rgb(cv::Vec3f(r, g, b));
-    cv::cvtColor(rgb, hsv, CV_RGB2HSV);
-    cv::Vec3b hsv_px = hsv.at<cv::Vec3b>(0,0);
-    double s = hsv_px.val[1], v = hsv_px.val[2];
-    return (1-c) * ((0.5*s)/255.0) * ((10*v)/255.0);
+    cv::Mat3f hsv, rgb(cv::Vec3f(b, g, r));
+    cv::cvtColor(rgb, hsv, CV_BGR2HSV);
+    const cv::Vec3b hsv_px = hsv.at<cv::Vec3b>(0,0);
+    const double sat = hsv_px.val[1], val = hsv_px.val[2];
+    return (2*sat) + (3*val) + (3*c);
 }
 
-void set_best_peak(cv::Mat& labels, cv::Mat& centers, unsigned char& r, unsigned char& g, unsigned char& b)
+void set_best_peak(cv::Mat& labels, cv::Mat& centers, unsigned char& b, unsigned char& g, unsigned char& r)
 {
     const size_t num_labels = labels.rows;
     std::vector<unsigned int> cluster_counts(centers.rows, 0);
@@ -43,18 +43,37 @@ void set_best_peak(cv::Mat& labels, cv::Mat& centers, unsigned char& r, unsigned
     double max_score = 0;
     for (int i = 0; i < centers.rows; i++)
     {
-        float rf = centers.at<float>(i,0);
+        float bf = centers.at<float>(i,0);
         float gf = centers.at<float>(i,1);
-        float bf = centers.at<float>(i,2);
-        double score = get_color_score(rf, gf, bf, static_cast<double>(cluster_counts[i])/num_labels);
+        float rf = centers.at<float>(i,2);
+        double score = get_color_score(bf, gf, rf, static_cast<double>(cluster_counts[i])/num_labels);
         if (score > max_score)
         {
             max_score = score;
-            r = static_cast<unsigned char>(rf);
-            g = static_cast<unsigned char>(gf);
             b = static_cast<unsigned char>(bf);
+            g = static_cast<unsigned char>(gf);
+            r = static_cast<unsigned char>(rf);
         }
     }
+}
+
+sh_common_interfaces::msg::Color do_pipeline(cv::Mat& img,
+                                             const int k,
+                                             const int attempts,
+                                             ColorPeakWindow& window,
+                                             sh_common_interfaces::msg::Color& peak_instantaneous)
+{
+    cv::Mat kmeans_labels, kmeans_centers;
+    unsigned char r, g, b;
+    sh_common_interfaces::msg::Color peak_current;
+
+    get_kmeans_of(img, k, attempts, kmeans_labels, kmeans_centers);
+    set_best_peak(kmeans_labels, kmeans_centers, b, g, r);
+    peak_instantaneous.channels = {r, g, b};
+
+    peak_current.channels.resize(3, 0);
+    window.push_and_eval(r, g, b, peak_current);
+    return peak_current;
 }
 
 void ColorPeakWindow::push_and_eval(unsigned char r,
@@ -120,50 +139,43 @@ ColorPeaksCalculatorNode::ColorPeaksCalculatorNode() :
 
 void ColorPeaksCalculatorNode::cap_image_raw_callback(const sensor_msgs::msg::Image::ConstSharedPtr& msg)
 {
-    sh_scc_interfaces::msg::ColorPeaksTelem color_peaks_telem_msg;
+    sh_scc_interfaces::msg::ColorPeaksTelem peaks_current_telem_msg;
 
     const cv_bridge::CvImageConstPtr bgr = cv_bridge::toCvShare(msg, msg->encoding);
-    cv_bridge::CvImage rgb;
-    cv::cvtColor(bgr->image, rgb.image, cv::COLOR_BGR2RGB);
 
-    const int k = 4, attempts = 4;
-    color_peaks_telem_msg.kmeans_k = k;
-    color_peaks_telem_msg.kmeans_attempts = attempts;
+    const int k = 4, attempts = 1;
+    peaks_current_telem_msg.kmeans_k = k;
+    peaks_current_telem_msg.kmeans_attempts = attempts;
 
-    double compactness_left, compactness_right;
-    cv::Mat kmeans_labels_left, kmeans_labels_right, kmeans_centers_left, kmeans_centers_right;
-    cv::Range range_height(0, rgb.image.rows);
-    const int width = rgb.image.cols, half_width = width / 2;
-    cv::Mat cv_img_world_left = rgb.image(range_height, cv::Range(0, half_width));
-    cv::Mat cv_img_world_right = rgb.image(range_height, cv::Range(half_width, width));
-    get_kmeans_of(cv_img_world_left, k, attempts, compactness_left, kmeans_labels_left, kmeans_centers_left);
-    get_kmeans_of(cv_img_world_right, k, attempts, compactness_right, kmeans_labels_right, kmeans_centers_right);
+    const cv::Range range_height(0, bgr->image.rows);
+    const int width = bgr->image.cols, half_width = width / 2;
+    cv::Mat cv_img_left = bgr->image(range_height, cv::Range(0, half_width));
+    cv::Mat cv_img_right = bgr->image(range_height, cv::Range(half_width, width));
 
-    unsigned char lr, lg, lb, rr, rg, rb;
-    set_best_peak(kmeans_labels_left, kmeans_centers_left, lr, lg, lb);
-    set_best_peak(kmeans_labels_right, kmeans_centers_right, rr, rg, rb);
-    color_peaks_telem_msg.left_instantaneous_best_peak.channels = {lr, lg, lb};
-    color_peaks_telem_msg.right_instantaneous_best_peak.channels = {rr, rg, rb};
+    peaks_current_telem_msg.left_current_peak = do_pipeline(
+        cv_img_left,
+        k,
+        attempts,
+        window_left,
+        peaks_current_telem_msg.left_instantaneous_best_peak
+    );
+    peaks_current_telem_msg.right_current_peak = do_pipeline(
+        cv_img_right,
+        k,
+        attempts,
+        window_right,
+        peaks_current_telem_msg.right_instantaneous_best_peak
+    );
 
-    sh_common_interfaces::msg::Color color_peak_left_msg;
-    color_peak_left_msg.channels.resize(3, 0);
-    window_left.push_and_eval(lr, lg, lb, color_peak_left_msg);
-    color_peaks_telem_msg.left_current_peak = color_peak_left_msg;
-
-    sh_common_interfaces::msg::Color color_peak_right_msg;
-    color_peak_right_msg.channels.resize(3, 0);
-    window_right.push_and_eval(rr, rg, rb, color_peak_right_msg);
-    color_peaks_telem_msg.right_current_peak = color_peak_right_msg;
-
-    color_peak_left_pub->publish(color_peak_left_msg);
-    color_peak_right_pub->publish(color_peak_right_msg);
-    color_peaks_telem_pub->publish(color_peaks_telem_msg);
+    color_peak_left_pub->publish(peaks_current_telem_msg.left_current_peak);
+    color_peak_right_pub->publish(peaks_current_telem_msg.right_current_peak);
+    color_peaks_telem_pub->publish(peaks_current_telem_msg);
 }
 
 }
 
 int main(int argc, char** argv) 
-{ 
+{
     rclcpp::init(argc, argv);
     rclcpp::spin(std::make_shared<sh::ColorPeaksCalculatorNode>());
     return 0;

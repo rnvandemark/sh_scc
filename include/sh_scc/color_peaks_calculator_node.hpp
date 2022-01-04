@@ -16,7 +16,7 @@ namespace sh {
 struct ColorPeakWindow
 {
 protected:
-    const static size_t MAX_ELEMS = 10;
+    const static size_t MAX_ELEMS = 8;
     unsigned int size;
     unsigned int total_r;
     unsigned int total_g;
