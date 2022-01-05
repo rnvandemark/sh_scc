@@ -27,6 +27,7 @@
     <exec_depend>sh_scc_interfaces</exec_depend>
     <exec_depend>image_transport</exec_depend>
     <exec_depend>OpenCV</exec_depend>
+    <exec_depend>image_publisher</exec_depend>
 
     <export>
         <build_type>ament_cmake</build_type>
