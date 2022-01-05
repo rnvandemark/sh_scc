@@ -140,6 +140,7 @@ ColorPeaksCalculatorNode::ColorPeaksCalculatorNode() :
 void ColorPeaksCalculatorNode::cap_image_raw_callback(const sensor_msgs::msg::Image::ConstSharedPtr& msg)
 {
     sh_scc_interfaces::msg::ColorPeaksTelem peaks_current_telem_msg;
+    peaks_current_telem_msg.image = *msg;
 
     const cv_bridge::CvImageConstPtr bgr = cv_bridge::toCvShare(msg, msg->encoding);
 
